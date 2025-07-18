@@ -13,6 +13,10 @@ plugins {
     // Spring Boot плагин (apply false означает, что он будет применен только к подпроектам,
     // которые явно укажут его использование)
     id("org.springframework.boot") apply false
+    //чекстайл
+    id("com.diffplug.spotless") apply false
+    //поиск глупостей
+    id("name.remal.sonarlint") apply false
 }
 
 // Конфигурация IntelliJ IDEA
@@ -76,6 +80,7 @@ allprojects {
         resolutionStrategy {
             // Вызывать ошибку при конфликтах версий
             failOnVersionConflict()
+            force("commons-io:commons-io:2.18.0")
         }
     }
 }
@@ -99,6 +104,15 @@ subprojects {
 
         // Дополнительные параметры компилятора
         options.compilerArgs.addAll(listOf("-parameters", "-Xlint:all,-serial,-processing"))
+        dependsOn("spotlessApply")
+    }
+
+    apply<name.remal.gradle_plugins.sonarlint.SonarLintPlugin>()
+    apply<com.diffplug.gradle.spotless.SpotlessPlugin>()
+    configure<com.diffplug.gradle.spotless.SpotlessExtension> {
+        java {
+            palantirJavaFormat("2.63.0")
+        }
     }
 
     // Настраиваем тестирование
