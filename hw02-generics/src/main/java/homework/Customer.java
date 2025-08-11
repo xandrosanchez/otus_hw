@@ -2,13 +2,10 @@ package homework;
 
 import java.util.Objects;
 
-@SuppressWarnings({"java:S1135"}) // при выполнении ДЗ эту аннотацию надо удалить
-public class Customer {
-    private final long id;
+public class Customer implements Comparable<Customer>, Cloneable {
+    private Long id;
     private String name;
-    private long scores;
-
-    // todo: 1. в этом классе надо исправить ошибки
+    private Long scores;
 
     public Customer(long id, String name, long scores) {
         this.id = id;
@@ -16,8 +13,12 @@ public class Customer {
         this.scores = scores;
     }
 
-    public long getId() {
+    public Long getId() {
         return id;
+    }
+
+    public void setId(long id) {
+        this.id = id;
     }
 
     public String getName() {
@@ -28,7 +29,7 @@ public class Customer {
         this.name = name;
     }
 
-    public long getScores() {
+    public Long getScores() {
         return scores;
     }
 
@@ -37,27 +38,39 @@ public class Customer {
     }
 
     @Override
-    public String toString() {
-        return "Customer{" + "id=" + id + ", name='" + name + '\'' + ", scores=" + scores + '}';
-    }
-
-    @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (!(o instanceof Customer customer)) return false;
 
-        Customer customer = (Customer) o;
-
-        if (id != customer.id) return false;
-        if (scores != customer.scores) return false;
-        return Objects.equals(name, customer.name);
+        return Objects.equals(id, customer.id);
     }
 
     @Override
     public int hashCode() {
-        int result = Long.hashCode(id);
-        result = 31 * result + (name != null ? name.hashCode() : 0);
-        result = 31 * result + Long.hashCode(scores);
-        return result;
+        return Objects.hash(id);
+    }
+
+    @Override
+    public String toString() {
+        final StringBuffer sb = new StringBuffer("Customer{");
+        sb.append("id=").append(id);
+        sb.append(", name='").append(name).append('\'');
+        sb.append(", scores=").append(scores);
+        sb.append('}');
+        return sb.toString();
+    }
+
+    @Override
+    public int compareTo(Customer o) {
+        return Long.compare(this.scores, o.scores);
+    }
+
+    @Override
+    public Customer clone() {
+        try {
+            return (Customer) super.clone();
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError();
+        }
     }
 }
