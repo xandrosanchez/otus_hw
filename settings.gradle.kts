@@ -1,5 +1,6 @@
 rootProject.name = "otus_hw"
 include("hw01-gradle")
+include("hw02-generics")
 
 pluginManagement {
     val dependencyManagement: String by settings
