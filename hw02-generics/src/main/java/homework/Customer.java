@@ -2,7 +2,7 @@ package homework;
 
 import java.util.Objects;
 
-public class Customer implements Comparable<Customer>, Cloneable {
+public class Customer implements Cloneable {
     private Long id;
     private String name;
     private Long scores;
@@ -58,11 +58,6 @@ public class Customer implements Comparable<Customer>, Cloneable {
         sb.append(", scores=").append(scores);
         sb.append('}');
         return sb.toString();
-    }
-
-    @Override
-    public int compareTo(Customer o) {
-        return Long.compare(this.scores, o.scores);
     }
 
     @Override

@@ -1,13 +1,10 @@
 package homework;
 
-import java.util.AbstractMap;
-import java.util.Map;
-import java.util.NavigableMap;
-import java.util.TreeMap;
+import java.util.*;
 
 public class CustomerService {
 
-    NavigableMap<Customer, String> customers;
+    private NavigableMap<Customer, String> customers;
 
     public Map.Entry<Customer, String> getSmallest() {
         if (customers.isEmpty()) {
@@ -21,7 +18,7 @@ public class CustomerService {
 
     public void add(Customer customer, String data) {
         if (customers == null) {
-            customers = new TreeMap<>();
+            customers = new TreeMap<>(Comparator.comparingLong(Customer::getScores));
         }
         customers.put(customer, data);
     }

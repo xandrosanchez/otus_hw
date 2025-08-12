@@ -5,7 +5,7 @@ import java.util.List;
 
 public class CustomerReverseOrder {
 
-    List<Customer> customers;
+    private List<Customer> customers;
 
     public void add(Customer customer) {
         if (customers == null) {
