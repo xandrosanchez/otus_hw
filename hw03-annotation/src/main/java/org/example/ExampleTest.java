@@ -15,8 +15,12 @@ public class ExampleTest {
 
     @Test
     public void testSuccess() {
-        assert testData.equals("test");
         System.out.println("Успешный тест выполняется");
+    }
+
+    @Test
+    public void testFail() {
+        throw new NullPointerException();
     }
 
     @After
