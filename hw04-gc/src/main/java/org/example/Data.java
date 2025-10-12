@@ -1,13 +1,4 @@
 package org.example;
 
-public class Data {
-    private final Integer value;
-
-    public Data(Integer value) {
-        this.value = value;
-    }
-
-    public Integer getValue() {
-        return value;
-    }
+public record Data(int value) {
 }
