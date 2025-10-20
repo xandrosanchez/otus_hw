@@ -23,3 +23,4 @@ pluginManagement {
         id("name.remal.sonarlint") version sonarlint
     }
 }
+include("hw05-aop")
