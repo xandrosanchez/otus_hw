@@ -24,3 +24,4 @@ pluginManagement {
     }
 }
 include("hw05-aop")
+include("hw07-patterns")
