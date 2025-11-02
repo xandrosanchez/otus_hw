@@ -1,7 +1,6 @@
 package org.example;
 
 import java.util.List;
-
 import org.example.handler.ComplexProcessor;
 import org.example.listener.ListenerPrinterConsole;
 import org.example.model.Message;
