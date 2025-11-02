@@ -24,4 +24,5 @@ pluginManagement {
     }
 }
 include("hw05-aop")
+include("hw06_banlomat")
 include("hw07-patterns")
