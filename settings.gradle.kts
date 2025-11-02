@@ -25,4 +25,4 @@ pluginManagement {
 }
 include("hw05-aop")
 include("hw06_banlomat")
-include("hw06-bankomat")
+include("hw07-patterns")
