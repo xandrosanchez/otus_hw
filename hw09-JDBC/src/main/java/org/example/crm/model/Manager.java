@@ -1,6 +1,9 @@
 package org.example.crm.model;
 
+import org.example.Id;
+
 public class Manager {
+    @Id
     private Long no;
     private String label;
     private String param1;

@@ -7,9 +7,7 @@ import org.example.crm.model.Client;
 import org.example.crm.model.Manager;
 import org.example.crm.service.DbServiceClientImpl;
 import org.example.crm.service.DbServiceManagerImpl;
-import org.example.mapper.DataTemplateJdbc;
-import org.example.mapper.EntityClassMetaData;
-import org.example.mapper.EntitySQLMetaData;
+import org.example.mapper.*;
 import org.flywaydb.core.Flyway;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,10 +30,10 @@ public class HomeWork {
         var dbExecutor = new DbExecutorImpl();
 
         // Работа с клиентом
-        EntityClassMetaData<Client> entityClassMetaDataClient; // = new EntityClassMetaDataImpl();
-        EntitySQLMetaData entitySQLMetaDataClient = null; // = new EntitySQLMetaDataImpl(entityClassMetaDataClient);
+        EntityClassMetaData<Client> entityClassMetaDataClient = new EntityClassMetaDataImpl<>(Client.class);
+        EntitySQLMetaData entitySQLMetaDataClient = new EntitySQLMetaDataImpl<>(entityClassMetaDataClient);
         var dataTemplateClient = new DataTemplateJdbc<Client>(
-                dbExecutor, entitySQLMetaDataClient); // реализация DataTemplate, универсальная
+                dbExecutor, entitySQLMetaDataClient, entityClassMetaDataClient); // реализация DataTemplate, универсальная
 
         // Код дальше должен остаться
         var dbServiceClient = new DbServiceClientImpl(transactionRunner, dataTemplateClient);
@@ -49,9 +47,12 @@ public class HomeWork {
 
         // Сделайте тоже самое с классом Manager (для него надо сделать свою таблицу)
 
-        EntityClassMetaData<Manager> entityClassMetaDataManager; // = new EntityClassMetaDataImpl();
-        EntitySQLMetaData entitySQLMetaDataManager = null; // = new EntitySQLMetaDataImpl(entityClassMetaDataManager);
-        var dataTemplateManager = new DataTemplateJdbc<Manager>(dbExecutor, entitySQLMetaDataManager);
+        EntityClassMetaData<Manager> entityClassMetaDataManager = new EntityClassMetaDataImpl<>(Manager.class);
+        EntitySQLMetaData entitySQLMetaDataManager  = new EntitySQLMetaDataImpl<>(entityClassMetaDataManager);
+        var dataTemplateManager = new DataTemplateJdbc<Manager>(
+                dbExecutor,
+                entitySQLMetaDataManager,
+                entityClassMetaDataManager);
 
         var dbServiceManager = new DbServiceManagerImpl(transactionRunner, dataTemplateManager);
         dbServiceManager.saveManager(new Manager("ManagerFirst"));
@@ -67,7 +68,7 @@ public class HomeWork {
         log.info("db migration started...");
         var flyway = Flyway.configure()
                 .dataSource(dataSource)
-                .locations("classpath:/db/migration")
+                .locations("classpath:/migration")
                 .load();
         flyway.migrate();
         log.info("db migration finished.");

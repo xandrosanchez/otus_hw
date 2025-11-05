@@ -1,6 +1,9 @@
 package org.example.crm.model;
 
+import org.example.Id;
+
 public class Client {
+    @Id
     private Long id;
     private String name;
 
