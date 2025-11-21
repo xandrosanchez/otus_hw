@@ -15,19 +15,12 @@ public class DbServiceClientImpl implements DBServiceClient {
 
     private final DataTemplate<Client> clientDataTemplate;
     private final TransactionManager transactionManager;
-    private final HwCache<Long, Client> cache;
-
-    public DbServiceClientImpl(TransactionManager transactionManager, DataTemplate<Client> clientDataTemplate) {
-        this.transactionManager = transactionManager;
-        this.clientDataTemplate = clientDataTemplate;
-        this.cache = new ru.otus.cachehw.MyCache<>();
-        setupCacheListener();
-    }
+    private final HwCache<ClientId, Client> cache;
 
     public DbServiceClientImpl(
             TransactionManager transactionManager,
             DataTemplate<Client> clientDataTemplate,
-            HwCache<Long, Client> cache) {
+            HwCache<ClientId, Client> cache) {
         this.transactionManager = transactionManager;
         this.clientDataTemplate = clientDataTemplate;
         this.cache = cache;
@@ -42,20 +35,21 @@ public class DbServiceClientImpl implements DBServiceClient {
                 var savedClient = clientDataTemplate.insert(session, clientCloned);
                 log.info("created client: {}", clientCloned);
                 // Добавляем в кэш при создании
-                cache.put(savedClient.getId(), savedClient);
+                cache.put(new ClientId(savedClient.getId()), savedClient);
                 return savedClient;
             }
             var savedClient = clientDataTemplate.update(session, clientCloned);
             log.info("updated client: {}", savedClient);
             // Обновляем в кэш при изменении
-            cache.put(savedClient.getId(), savedClient);
+            cache.put(new ClientId(savedClient.getId()), savedClient);
             return savedClient;
         });
     }
 
     @Override
     public Optional<Client> getClient(long id) {
-        Client cachedClient = cache.get(id);
+        ClientId clientId = new ClientId(id);
+        Client cachedClient = cache.get(clientId);
         if (cachedClient != null) {
             log.info("retrieved client from cache, id: {}", id);
             return Optional.of(cachedClient);
@@ -66,7 +60,7 @@ public class DbServiceClientImpl implements DBServiceClient {
                 Client client = clientOptional.get();
                 log.info("retrieved client from database, id: {}", id);
                 // Сохраняем в кэш
-                cache.put(id, client);
+                cache.put(clientId, client);
                 return Optional.of(client);
             }
             log.info("client not found, id: {}", id);
@@ -84,9 +78,9 @@ public class DbServiceClientImpl implements DBServiceClient {
     }
 
     private void setupCacheListener() {
-        HwListener<Long, Client> listener = new HwListener<Long, Client>() {
+        HwListener<ClientId, Client> listener = new HwListener<ClientId, Client>() {
             @Override
-            public void notify(Long key, Client value, String action) {
+            public void notify(ClientId key, Client value, String action) {
                 log.debug("Cache event - key: {}, action: {}, client: {}", key, action, value.getName());
             }
         };

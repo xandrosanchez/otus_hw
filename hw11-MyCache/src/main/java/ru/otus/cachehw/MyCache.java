@@ -1,5 +1,6 @@
 package ru.otus.cachehw;
 
+import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -10,7 +11,7 @@ public class MyCache<K, V> implements HwCache<K, V> {
     private static final Logger logger = LoggerFactory.getLogger(MyCache.class);
 
     private final Map<K, V> cache = new WeakHashMap<>();
-    private final CopyOnWriteArrayList<HwListener<K, V>> listeners = new CopyOnWriteArrayList<>();
+    private final List<HwListener<K, V>> listeners = new CopyOnWriteArrayList<>();
 
     @Override
     public void put(K key, V value) {

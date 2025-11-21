@@ -3,7 +3,6 @@ package otus.crm.service;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -15,6 +14,7 @@ import ru.otus.core.repository.DataTemplateHibernate;
 import ru.otus.crm.model.Address;
 import ru.otus.crm.model.Client;
 import ru.otus.crm.model.Phone;
+import ru.otus.crm.service.ClientId;
 import ru.otus.crm.service.DbServiceClientImpl;
 
 @DisplayName("Демо работы с hibernate (с абстракциями) должно ")
@@ -73,7 +73,7 @@ class DbServiceClientTest extends AbstractHibernateTest {
         var savedClient = dbServiceClient.saveClient(client);
         long clientId = savedClient.getId();
 
-        HwCache<Long, Client> cache = new MyCache<>();
+        HwCache<ClientId, Client> cache = new MyCache<>();
         var cachedService =
                 new DbServiceClientImpl(transactionManager, new DataTemplateHibernate<>(Client.class), cache);
 
@@ -104,7 +104,7 @@ class DbServiceClientTest extends AbstractHibernateTest {
         long clientId = savedClient.getId();
 
         // Создаем сервис с кэшем для этого теста
-        HwCache<Long, Client> cache = new MyCache<>();
+        HwCache<ClientId, Client> cache = new MyCache<>();
         var cachedService =
                 new DbServiceClientImpl(transactionManager, new DataTemplateHibernate<>(Client.class), cache);
 
