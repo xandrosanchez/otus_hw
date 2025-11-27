@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>CRM System - Clients</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .client-form {
+            background: #f5f5f5;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+
+        .form-group {
+            margin-bottom: 10px;
+        }
+
+        input {
+            padding: 8px;
+            width: 200px;
+        }
+
+        button {
+            padding: 8px 15px;
+            background: #007cba;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #005a87;
+        }
+
+        .clients-list {
+            margin-top: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>Client Management</h1>
+        <a href="/login">Logout</a>
+    </div>
+
+    <div class="client-form">
+        <h3>Create New Client</h3>
+        <form method="post" action="/clients">
+            <div class="form-group">
+                <input type="text" name="name" placeholder="Client name" required>
+                <button type="submit">Create Client</button>
+            </div>
+        </form>
+    </div>
+    <div class="clients-list">
+        <h3>Clients List</h3>
+        <table>
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Address</th>
+                <th>Phones</th>
+            </tr>
+            </thead>
+            <tbody>
+            <#list clients as client>
+            <tr>
+                <td>${client.id}</td>
+                <td>${client.name}</td>
+                <td>${(client.address.street)!'No address'}</td>
+                <td>
+                    <#if client.phones??>
+                    <#list client.phones as phone>
+                    ${phone.number}<#if phone_has_next>, </#if>
+            </#list>
+            <#else>
+            No phones
+            </#if>
+            </td>
+            </tr>
+        </#list>
+        </tbody>
+        </table>
+    </div>
+</div>
+</body>
+</html>
