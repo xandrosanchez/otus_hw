@@ -1,7 +1,7 @@
 package org.example.handler;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 import org.example.listener.Listener;
 import org.example.model.Message;
@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory;
 public class ComplexProcessor implements Handler {
     private static final Logger logger = LoggerFactory.getLogger(ComplexProcessor.class);
 
-    private final List<Listener> listeners = new ArrayList<>();
+    private final List<Listener> listeners = new CopyOnWriteArrayList<>();
     private final List<Processor> processors;
     private final Consumer<Exception> errorHandler;
 

@@ -1,6 +1,5 @@
 package org.example.model;
 
-@SuppressWarnings({"java:S107", "java:S1135"})
 public class Message {
     private final long id;
     private final String field1;
@@ -13,32 +12,25 @@ public class Message {
     private final String field8;
     private final String field9;
     private final String field10;
+    private final String field11;
+    private final String field12;
+    private final ObjectForMessage field13;
 
-    // todo: 1. Добавить поля field11 - field13 (для field13 используйте класс ObjectForMessage)
-
-    private Message(
-            long id,
-            String field1,
-            String field2,
-            String field3,
-            String field4,
-            String field5,
-            String field6,
-            String field7,
-            String field8,
-            String field9,
-            String field10) {
-        this.id = id;
-        this.field1 = field1;
-        this.field2 = field2;
-        this.field3 = field3;
-        this.field4 = field4;
-        this.field5 = field5;
-        this.field6 = field6;
-        this.field7 = field7;
-        this.field8 = field8;
-        this.field9 = field9;
-        this.field10 = field10;
+    private Message(Builder builder) {
+        this.id = builder.id;
+        this.field1 = builder.field1;
+        this.field2 = builder.field2;
+        this.field3 = builder.field3;
+        this.field4 = builder.field4;
+        this.field5 = builder.field5;
+        this.field6 = builder.field6;
+        this.field7 = builder.field7;
+        this.field8 = builder.field8;
+        this.field9 = builder.field9;
+        this.field10 = builder.field10;
+        this.field11 = builder.field11;
+        this.field12 = builder.field12;
+        this.field13 = builder.field13;
     }
 
     public long getId() {
@@ -85,6 +77,18 @@ public class Message {
         return field10;
     }
 
+    public String getField11() {
+        return field11;
+    }
+
+    public String getField12() {
+        return field12;
+    }
+
+    public ObjectForMessage getField13() {
+        return field13;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -100,10 +104,6 @@ public class Message {
         return (int) (id ^ (id >>> 32));
     }
 
-    public Builder toBuilder() {
-        return new Builder(id, field1, field2, field3, field4, field5, field6, field7, field8, field9, field10);
-    }
-
     @Override
     public String toString() {
         return "Message{" + "id="
@@ -117,7 +117,18 @@ public class Message {
                 + field7 + '\'' + ", field8='"
                 + field8 + '\'' + ", field9='"
                 + field9 + '\'' + ", field10='"
-                + field10 + '\'' + '}';
+                + field10 + '\'' + ", field11='"
+                + field11 + '\'' + ", field12='"
+                + field12 + '\'' + ", field13="
+                + field13 + '}';
+    }
+
+    public static Builder builder(long id) {
+        return new Builder(id);
+    }
+
+    public Builder toBuilder() {
+        return new Builder(this);
     }
 
     public static class Builder {
@@ -132,34 +143,29 @@ public class Message {
         private String field8;
         private String field9;
         private String field10;
+        private String field11;
+        private String field12;
+        private ObjectForMessage field13;
 
         public Builder(long id) {
             this.id = id;
         }
 
-        private Builder(
-                long id,
-                String field1,
-                String field2,
-                String field3,
-                String field4,
-                String field5,
-                String field6,
-                String field7,
-                String field8,
-                String field9,
-                String field10) {
-            this.id = id;
-            this.field1 = field1;
-            this.field2 = field2;
-            this.field3 = field3;
-            this.field4 = field4;
-            this.field5 = field5;
-            this.field6 = field6;
-            this.field7 = field7;
-            this.field8 = field8;
-            this.field9 = field9;
-            this.field10 = field10;
+        public Builder(Message message) {
+            this.id = message.id;
+            this.field1 = message.field1;
+            this.field2 = message.field2;
+            this.field3 = message.field3;
+            this.field4 = message.field4;
+            this.field5 = message.field5;
+            this.field6 = message.field6;
+            this.field7 = message.field7;
+            this.field8 = message.field8;
+            this.field9 = message.field9;
+            this.field10 = message.field10;
+            this.field11 = message.field11;
+            this.field12 = message.field12;
+            this.field13 = message.field13;
         }
 
         public Builder field1(String field1) {
@@ -212,8 +218,23 @@ public class Message {
             return this;
         }
 
+        public Builder field11(String field11) {
+            this.field11 = field11;
+            return this;
+        }
+
+        public Builder field12(String field12) {
+            this.field12 = field12;
+            return this;
+        }
+
+        public Builder field13(ObjectForMessage field13) {
+            this.field13 = field13;
+            return this;
+        }
+
         public Message build() {
-            return new Message(id, field1, field2, field3, field4, field5, field6, field7, field8, field9, field10);
+            return new Message(this);
         }
     }
 }

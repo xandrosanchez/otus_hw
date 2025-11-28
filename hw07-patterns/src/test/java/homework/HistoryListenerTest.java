@@ -1,18 +1,18 @@
 package homework;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.ArrayList;
+import java.util.List;
 import org.example.listener.homework.HistoryListener;
 import org.example.model.Message;
 import org.example.model.ObjectForMessage;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 class HistoryListenerTest {
 
     @Test
-    @SuppressWarnings({"java:S125", "java:S1135"})
     void listenerTest() {
         // given
         var historyListener = new HistoryListener();
@@ -24,20 +24,18 @@ class HistoryListenerTest {
         field13Data.add(data);
         field13.setData(field13Data);
 
-        var message = new Message.Builder(id)
-                .field10("field10")
-                // TODO: раскоментировать       .field13(field13)
-                .build();
+        var message = Message.builder(id).field10("field10").field13(field13).build();
 
         // when
         historyListener.onUpdated(message);
-        // TODO: раскоментировать        message.getField13().setData(new ArrayList<>()); //меняем исходное сообщение
-        // TODO: раскоментировать        field13Data.clear(); //меняем исходный список
+        message.getField13().setData(new ArrayList<>()); // меняем исходное сообщение
+        field13Data.clear(); // меняем исходный список
 
         // then
         var messageFromHistory = historyListener.findMessageById(id);
         assertThat(messageFromHistory).isPresent();
-        // TODO: раскоментировать
-        // assertThat(messageFromHistory.get().getField13().getData()).containsExactly(data);
+        var retrievedData = messageFromHistory.get().getField13().getData();
+        assertEquals(1, retrievedData.size());
+        assertEquals(List.of(data), retrievedData);
     }
 }
