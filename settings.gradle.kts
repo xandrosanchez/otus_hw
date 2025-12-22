@@ -33,3 +33,8 @@ include("hw11-MyCache")
 include("hw12-Jetty")
 include("hw13-di")
 include("hw13-di")
+include("hw18-1408")
+include("hw18-1408:client-service")
+findProject(":hw18-1408:client-service")?.name = "client-service"
+include("hw18-1408:datastore-service")
+findProject(":hw18-1408:datastore-service")?.name = "datastore-service"
