@@ -33,6 +33,6 @@ include("hw11-MyCache")
 include("hw12-Jetty")
 include("hw13-di")
 include("hw16-concurrentCollections")
+include("hw17-gRPC")
 include("hw14-SpringBootAppliction")
 include("hw15-executors")
-

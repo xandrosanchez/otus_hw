@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "ru.otus.numbers.generated";
+option java_outer_classname = "NumbersProto";
+
+service NumbersService {
+    rpc GetSequence(SequenceRequest) returns (stream SequenceResponse);
+}
+
+message SequenceRequest {
+    int32 firstValue = 1;
+    int32 lastValue = 2;
+}
+
+message SequenceResponse {
+    int32 value = 1;
+}
