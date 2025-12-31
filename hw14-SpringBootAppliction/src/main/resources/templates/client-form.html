@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>${client.id != null ? 'Редактирование клиента' : 'Новый клиент'}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: inline-block;
+            width: 100px;
+        }
+
+        input[type="text"], input[type="number"] {
+            width: 300px;
+            padding: 5px;
+        }
+
+        button {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .address-group, .phone-group {
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px dashed #ccc;
+        }
+
+        .actions {
+            margin-top: 20px;
+        }
+
+        .actions a {
+            margin-left: 15px;
+            color: #6c757d;
+            text-decoration: none;
+        }
+
+        .actions a:hover {
+            color: #495057;
+        }
+    </style>
+</head>
+<body>
+<h1>${client.id != null ? 'Редактирование клиента' : 'Новый клиент'}</h1>
+
+<form action="/client/save" method="post">
+    <!-- Скрытое поле для ID (если редактируем существующую запись) -->
+    <input type="hidden" name="id" value="${client.id}"/>
+
+    <!-- Поле для имени клиента -->
+    <div class="form-group">
+        <label for="name">Имя:</label>
+        <input
+                type="text"
+                id="name"
+                name="name"
+                value="${client.name}"
+                required
+        />
+    </div>
+
+    <!-- Блок для управления адресами -->
+    <h3>Адреса</h3>
+    <#list client.addresses as address>
+    <div class="address-group">
+        <input
+                type="hidden"
+                name="addresses[${address_index}].id"
+                value="${address.id}"
+        />
+        <label>Улица:</label>
+        <input
+                type="text"
+                name="addresses[${address_index}].street"
+                value="${address.street}"
+        />
+        <label>Город:</label>
+        <input
+                type="text"
+                name="addresses[${address_index}].city"
+                value="${address.city}"
+        />
+        <label>Почтовый индекс:</label>
+        <input
+                type="text"
+                name="addresses[${address_index}].postalCode"
+                value="${address.postalCode}"
+        />
+    </div>
+</#list>
+
+<!-- Блок для управления телефонами -->
+<h3>Телефоны</h3>
+<#list client.phones as phone>
+<div class="phone-group">
+    <input
+            type="hidden"
+            name="phones[${phone_index}].id"
+            value="${phone.id}"
+    />
+    <label>Номер:</label>
+    <input
+            type="text"
+            name="phones[${phone_index}].number"
+            value="${phone.number}"
+    />
+    <label>Тип:</label>
+    <input
+            type="text"
+            name="phones[${phone_index}].type"
+            value="${phone.type}"
+    />
+</div>
+</#list>
+
+<!-- Кнопки управления -->
+<div class="actions">
+    <button type="submit">
+        ${client.id != null ? 'Сохранить изменения' : 'Добавить клиента'}
+    </button>
+    <a href="/clients">Вернуться к списку клиентов</a>
+</div>
+</form>
+</body>
+</html>
