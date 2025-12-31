@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Список клиентов</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        .actions a {
+            margin-right: 10px;
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        .actions a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+<h1>Клиенты</h1>
+<a href="/client/new">Добавить клиента</a>
+
+<table>
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>Имя</th>
+        <th>Адреса</th>
+        <th>Телефоны</th>
+        <th>Действия</th>
+    </tr>
+    </thead>
+    <tbody>
+    <#list clients as client>
+    <tr>
+        <td>${client.id}</td>
+        <td>${client.name}</td>
+        <td>
+            <#list client.addresses as address>
+            ${address.street}, ${address.city}<br/>
+        </
+        #list>
+        </td>
+        <td>
+            <#list client.phones as phone>
+            ${phone.number} (${phone.type})<br/>
+        </
+        #list>
+        </td>
+        <td class="actions">
+            <a href="/client/${client.id}/edit">Редактировать</a>
+            <a href="#" onclick="confirmDelete(${client.id})">Удалить</a>
+        </td>
+    </tr>
+    </
+    #list>
+    </tbody>
+</table>
+
+<script>
+    function confirmDelete(id) {
+        if (confirm("Вы уверены, что хотите удалить клиента?")) {
+            // Здесь можно добавить AJAX‑запрос на удаление
+            alert("Клиент " + id + " удалён (в реальной реализации здесь будет API‑запрос)");
+        }
+    }
+</script>
+</body>
+</html>
