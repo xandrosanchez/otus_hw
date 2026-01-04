@@ -38,6 +38,6 @@ findProject(":hw18-1408:client-service")?.name = "client-service"
 include("hw18-1408:datastore-service")
 findProject(":hw18-1408:datastore-service")?.name = "datastore-service"
 include("hw16-concurrentCollections")
-include("hw17-gRPC")
 include("hw14-SpringBootAppliction")
 include("hw15-executors")
+include("SelfMadeORM")
