@@ -15,10 +15,6 @@ import org.example.core.repository.executor.DbExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Сохраняет объект в базу, читает объект из базы
- * с поддержкой разных стратегий генерации ID
- */
 @SuppressWarnings("java:S1068")
 public class DataTemplateJdbc<T> implements DataTemplate<T> {
 
@@ -40,30 +36,37 @@ public class DataTemplateJdbc<T> implements DataTemplate<T> {
         return findByIdInternal(connection, id);
     }
 
-    /**
-     * Найти объект по UUID
-     */
+    public Optional<T> findById(Connection connection, Object id, Class<?> idType) {
+        return findByIdInternal(connection, id);
+    }
+
     public Optional<T> findByUuid(Connection connection, UUID uuid) {
         return findByIdInternal(connection, uuid);
     }
 
     private Optional<T> findByIdInternal(Connection connection, Object id) {
         String sql = entitySQLMetaData.getSelectByIdSql();
+        log.debug("Finding by ID: {}, SQL: {}", id, sql);
+
         return dbExecutor.executeSelect(connection, sql, List.of(id), rs -> {
             try {
                 if (rs.next()) {
-                    return createObject(rs);
+                    T entity = createObject(rs);
+                    log.debug("Found entity: {}", entity);
+                    return entity;
                 }
+                log.debug("Entity not found with ID: {}", id);
+                return null;
             } catch (SQLException e) {
                 throw new DataTemplateException(e);
             }
-            return null;
         });
     }
 
     @Override
     public List<T> findAll(Connection connection) {
         String sql = entitySQLMetaData.getSelectAllSql();
+        log.debug("Find all SQL: {}", sql);
 
         return dbExecutor
                 .executeSelect(connection, sql, List.of(), rs -> {
@@ -75,6 +78,7 @@ public class DataTemplateJdbc<T> implements DataTemplate<T> {
                     } catch (SQLException e) {
                         throw new DataTemplateException(e);
                     }
+                    log.debug("Found {} entities", result.size());
                     return result;
                 })
                 .orElseThrow(() -> new DataTemplateException("Ошибка при получении всех записей"));
@@ -114,24 +118,62 @@ public class DataTemplateJdbc<T> implements DataTemplate<T> {
         List<Object> params = prepareInsertParams(entity, strategy);
         log.debug("INSERT params: {}", params);
 
+        long generatedId = 0;
+
         // Для UUID стратегии просто выполняем INSERT без ожидания сгенерированного ключа
         if (strategy.isUuid()) {
-            dbExecutor.executeStatement(connection, sql, params, false);
-            return 0;
+            long result = dbExecutor.executeStatement(connection, sql, params, false);
+            log.debug("INSERT result for UUID: {}", result);
+
+            // UUID уже установлен в prepareInsertParams, просто читаем версию
+            readVersionAfterInsert(connection, entity);
+            return result;
         }
         // Для IDENTITY стратегии возвращаем сгенерированный ID
         else if (strategy.isIdentity()) {
-            return dbExecutor.executeStatement(connection, sql, params, true);
+            generatedId = dbExecutor.executeStatement(connection, sql, params, true);
+            log.debug("INSERT result for IDENTITY: {}", generatedId);
+
+            // УСТАНАВЛИВАЕМ сгенерированный ID в объект
+            Field idField = entityClassMetaData.getIdField();
+            try {
+                idField.setAccessible(true);
+                idField.set(entity, generatedId);
+                log.debug("Set generated ID {} in entity", generatedId);
+            } catch (IllegalAccessException e) {
+                throw new DataTemplateException("Ошибка установки сгенерированного ID", e);
+            }
+
+            // После вставки читаем сгенерированную версию (если есть)
+            readVersionAfterInsert(connection, entity);
+            return generatedId;
         }
         // Для SEQUENCE стратегии выполняем INSERT
         else if (strategy.isSequence()) {
             long result = dbExecutor.executeStatement(connection, sql, params, true);
             log.debug("INSERT result for SEQUENCE: {}", result);
+
+            // ID уже установлен перед INSERT, читаем версию
+            readVersionAfterInsert(connection, entity);
             return result;
         }
         // Для AUTO стратегии (по умолчанию как IDENTITY)
         else {
-            return dbExecutor.executeStatement(connection, sql, params, true);
+            generatedId = dbExecutor.executeStatement(connection, sql, params, true);
+            log.debug("INSERT result for AUTO: {}", generatedId);
+
+            // Устанавливаем сгенерированный ID в объект
+            Field idField = entityClassMetaData.getIdField();
+            try {
+                idField.setAccessible(true);
+                idField.set(entity, generatedId);
+                log.debug("Set generated ID {} in entity for AUTO strategy", generatedId);
+            } catch (IllegalAccessException e) {
+                throw new DataTemplateException("Ошибка установки сгенерированного ID", e);
+            }
+
+            readVersionAfterInsert(connection, entity);
+            return generatedId;
         }
     }
 
@@ -140,30 +182,7 @@ public class DataTemplateJdbc<T> implements DataTemplate<T> {
         String sql = entitySQLMetaData.getUpdateSql();
         log.debug("UPDATE SQL: {}", sql);
 
-        List<Field> fieldsWithoutId = entityClassMetaData.getFieldsWithoutId();
-        List<Object> params = new ArrayList<>(fieldsWithoutId.stream()
-                .map(field -> {
-                    try {
-                        field.setAccessible(true);
-                        Object value = field.get(entity);
-                        log.debug("Field {} = {}", field.getName(), value);
-                        return value;
-                    } catch (IllegalAccessException e) {
-                        throw new DataTemplateException(e);
-                    }
-                })
-                .toList());
-
-        Field idField = entityClassMetaData.getIdField();
-        try {
-            idField.setAccessible(true);
-            Object idValue = idField.get(entity);
-            params.add(idValue);
-            log.debug("ID field {} = {}", idField.getName(), idValue);
-        } catch (IllegalAccessException e) {
-            throw new DataTemplateException(e);
-        }
-
+        List<Object> params = prepareUpdateParams(entity);
         log.debug("UPDATE params: {}", params);
 
         // Для UPDATE не ожидаем сгенерированных ключей
@@ -171,99 +190,17 @@ public class DataTemplateJdbc<T> implements DataTemplate<T> {
         log.debug("UPDATE affected rows: {}", affectedRows);
 
         if (affectedRows == 0) {
-            // Проверим, существует ли запись
-            String checkSql = entitySQLMetaData.getSelectByIdSql();
-            try {
-                var exists = dbExecutor
-                        .executeSelect(connection, checkSql, List.of(idField.get(entity)), rs -> {
-                            try {
-                                return rs.next();
-                            } catch (SQLException e) {
-                                throw new DataTemplateException(e);
-                            }
-                        })
-                        .orElse(false);
-
-                if (!exists) {
-                    throw new DataTemplateException(
-                            "Объект не найден для обновления. SQL: " + sql + ", params: " + params);
-                } else {
-                    log.debug("UPDATE не изменил данные (возможно, они идентичны)");
-                }
-            } catch (Exception e) {
-                throw new DataTemplateException("Ошибка при проверке существования записи: " + e.getMessage(), e);
+            // Проверим, существует ли запись с такой версией
+            if (!recordExistsWithVersion(connection, entity)) {
+                throw new OptimisticLockException("Объект не найден для обновления или была изменена версия. SQL: "
+                        + sql + ", params: " + params);
+            } else {
+                log.warn("UPDATE не изменил ни одной строки, хотя запись существует");
             }
-        }
-    }
-
-    private List<Object> prepareInsertParams(T entity, GenerationStrategy strategy) {
-        if (strategy.isIdentity()) {
-            // Для IDENTITY включаем только поля без ID
-            List<Field> fieldsWithoutId = entityClassMetaData.getFieldsWithoutId();
-            return fieldsWithoutId.stream()
-                    .map(field -> {
-                        try {
-                            field.setAccessible(true);
-                            return field.get(entity);
-                        } catch (IllegalAccessException e) {
-                            throw new DataTemplateException(e);
-                        }
-                    })
-                    .toList();
         } else {
-            // Для других стратегий включаем все поля
-            List<Field> allFields = entityClassMetaData.getAllFields();
-            return allFields.stream()
-                    .map(field -> {
-                        try {
-                            field.setAccessible(true);
-                            Object value = field.get(entity);
-
-                            // Для UUID, если значение null, генерируем новый
-                            if (value == null
-                                    && strategy.isUuid()
-                                    && field.getType().equals(UUID.class)) {
-                                value = UUID.randomUUID();
-                                field.set(entity, value);
-                            }
-
-                            return value;
-                        } catch (IllegalAccessException e) {
-                            throw new DataTemplateException(e);
-                        }
-                    })
-                    .toList();
-        }
-    }
-
-    private long getNextSequenceValue(Connection connection) {
-        if (entitySQLMetaData instanceof EntitySQLMetaDataImpl) {
-            EntitySQLMetaDataImpl<T> sqlMetaData = (EntitySQLMetaDataImpl<T>) entitySQLMetaData;
-            String sql = sqlMetaData.getNextSequenceValueSql();
-            return dbExecutor
-                    .executeSelect(connection, sql, List.of(), rs -> {
-                        try {
-                            if (rs.next()) {
-                                return rs.getLong(1);
-                            }
-                        } catch (SQLException e) {
-                            throw new DataTemplateException("Ошибка при получении значения последовательности", e);
-                        }
-                        throw new DataTemplateException("Не удалось получить значение последовательности");
-                    })
-                    .orElseThrow(() -> new DataTemplateException("Ошибка последовательности"));
-        } else {
-            throw new DataTemplateException("EntitySQLMetaData не поддерживает последовательности");
-        }
-    }
-
-    private void setIdFieldValue(T entity, Object value) {
-        try {
-            Field idField = entityClassMetaData.getIdField();
-            idField.setAccessible(true);
-            idField.set(entity, value);
-        } catch (IllegalAccessException e) {
-            throw new DataTemplateException("Ошибка установки значения ID", e);
+            // Увеличиваем версию в объекте после успешного UPDATE
+            incrementVersionInEntity(entity);
+            log.debug("Version incremented in entity");
         }
     }
 
@@ -277,7 +214,7 @@ public class DataTemplateJdbc<T> implements DataTemplate<T> {
                 field.setAccessible(true);
 
                 Class<?> fieldType = field.getType();
-                String fieldName = field.getName().toLowerCase(); // lowercase для поиска в ResultSet
+                String fieldName = field.getName().toLowerCase();
 
                 Object value = getValueFromResultSet(rs, fieldName, fieldType);
                 field.set(instance, value);
@@ -346,5 +283,214 @@ public class DataTemplateJdbc<T> implements DataTemplate<T> {
         } else {
             throw new IllegalArgumentException("Unsupported field type: " + fieldType);
         }
+    }
+
+    private List<Object> prepareInsertParams(T entity, GenerationStrategy strategy) {
+        List<Field> fieldsToInsert;
+
+        if (strategy.isIdentity()) {
+            // Для IDENTITY включаем все поля без ID
+            fieldsToInsert = entityClassMetaData.getFieldsWithoutId();
+        } else {
+            // Для других стратегий включаем все поля
+            fieldsToInsert = entityClassMetaData.getAllFields();
+        }
+
+        return fieldsToInsert.stream()
+                .map(field -> {
+                    try {
+                        field.setAccessible(true);
+                        Object value = field.get(entity);
+
+                        // Для UUID, если значение null, генерируем новый
+                        if (value == null
+                                && strategy.isUuid()
+                                && field.getType().equals(UUID.class)) {
+                            value = UUID.randomUUID();
+                            field.set(entity, value);
+                        }
+
+                        // Если поле версии не установлено, устанавливаем 0
+                        if (value == null && field.isAnnotationPresent(org.example.Version.class)) {
+                            value = 0L;
+                            field.set(entity, value);
+                        }
+
+                        return value;
+                    } catch (IllegalAccessException e) {
+                        throw new DataTemplateException(e);
+                    }
+                })
+                .toList();
+    }
+
+    private List<Object> prepareUpdateParams(T entity) {
+        // Получаем все поля без ID
+        List<Field> fields = entityClassMetaData.getFieldsWithoutId();
+        List<Object> params = new ArrayList<>();
+
+        for (Field field : fields) {
+            try {
+                field.setAccessible(true);
+
+                // Поле версии не включаем в обычные параметры SET,
+                // так как оно обновляется как version = version + 1
+                if (field.isAnnotationPresent(org.example.Version.class)) {
+                    continue;
+                }
+
+                Object value = field.get(entity);
+                params.add(value);
+                log.debug("Update param field {} = {}", field.getName(), value);
+            } catch (IllegalAccessException e) {
+                throw new DataTemplateException(e);
+            }
+        }
+
+        // Добавляем ID
+        Field idField = entityClassMetaData.getIdField();
+        try {
+            idField.setAccessible(true);
+            Object idValue = idField.get(entity);
+            params.add(idValue);
+            log.debug("Update param ID {} = {}", idField.getName(), idValue);
+        } catch (IllegalAccessException e) {
+            throw new DataTemplateException(e);
+        }
+
+        // Если есть поле версии, добавляем его в WHERE
+        if (entityClassMetaData.hasVersionField()) {
+            Field versionField = entityClassMetaData.getVersionField();
+            try {
+                versionField.setAccessible(true);
+                Object versionValue = versionField.get(entity);
+                params.add(versionValue);
+                log.debug("Update param version {} = {}", versionField.getName(), versionValue);
+            } catch (IllegalAccessException e) {
+                throw new DataTemplateException(e);
+            }
+        }
+
+        return params;
+    }
+
+    private long getNextSequenceValue(Connection connection) {
+        if (entitySQLMetaData instanceof EntitySQLMetaDataImpl) {
+            EntitySQLMetaDataImpl<T> sqlMetaData = (EntitySQLMetaDataImpl<T>) entitySQLMetaData;
+            String sql = sqlMetaData.getNextSequenceValueSql();
+            return dbExecutor
+                    .executeSelect(connection, sql, List.of(), rs -> {
+                        try {
+                            if (rs.next()) {
+                                return rs.getLong(1);
+                            }
+                        } catch (SQLException e) {
+                            throw new DataTemplateException("Ошибка при получении значения последовательности", e);
+                        }
+                        throw new DataTemplateException("Не удалось получить значение последовательности");
+                    })
+                    .orElseThrow(() -> new DataTemplateException("Ошибка последовательности"));
+        } else {
+            throw new DataTemplateException("EntitySQLMetaData не поддерживает последовательности");
+        }
+    }
+
+    private void readVersionAfterInsert(Connection connection, T entity) {
+        if (entityClassMetaData.hasVersionField()) {
+            Field idField = entityClassMetaData.getIdField();
+            try {
+                idField.setAccessible(true);
+                Object idValue = idField.get(entity);
+
+                // Читаем только что вставленную запись, чтобы получить актуальную версию
+                Optional<T> insertedEntity = findByIdInternal(connection, idValue);
+                if (insertedEntity.isPresent()) {
+                    Field versionField = entityClassMetaData.getVersionField();
+                    versionField.setAccessible(true);
+                    Object insertedVersion = versionField.get(insertedEntity.get());
+
+                    // Обновляем версию в исходном объекте
+                    versionField.set(entity, insertedVersion);
+                    log.debug("Read version after insert: {}", insertedVersion);
+                }
+            } catch (IllegalAccessException e) {
+                throw new DataTemplateException("Ошибка чтения версии после вставки", e);
+            }
+        }
+    }
+
+    private boolean recordExistsWithVersion(Connection connection, T entity) {
+        if (!entityClassMetaData.hasVersionField()) {
+            return recordExists(connection, entity);
+        }
+
+        Field idField = entityClassMetaData.getIdField();
+        Field versionField = entityClassMetaData.getVersionField();
+
+        try {
+            idField.setAccessible(true);
+            versionField.setAccessible(true);
+
+            Object idValue = idField.get(entity);
+            Object versionValue = versionField.get(entity);
+
+            String sql = entitySQLMetaData.getSelectByIdSql() + " AND " + getColumnName(versionField) + " = ?";
+
+            return dbExecutor
+                    .executeSelect(connection, sql, List.of(idValue, versionValue), rs -> {
+                        try {
+                            return rs.next();
+                        } catch (SQLException e) {
+                            throw new DataTemplateException(e);
+                        }
+                    })
+                    .orElse(false);
+
+        } catch (IllegalAccessException e) {
+            throw new DataTemplateException(e);
+        }
+    }
+
+    private boolean recordExists(Connection connection, T entity) {
+        Field idField = entityClassMetaData.getIdField();
+        try {
+            idField.setAccessible(true);
+            Object idValue = idField.get(entity);
+
+            String sql = entitySQLMetaData.getSelectByIdSql();
+            return dbExecutor
+                    .executeSelect(connection, sql, List.of(idValue), rs -> {
+                        try {
+                            return rs.next();
+                        } catch (SQLException e) {
+                            throw new DataTemplateException(e);
+                        }
+                    })
+                    .orElse(false);
+
+        } catch (IllegalAccessException e) {
+            throw new DataTemplateException(e);
+        }
+    }
+
+    private void incrementVersionInEntity(T entity) {
+        if (entityClassMetaData.hasVersionField()) {
+            Field versionField = entityClassMetaData.getVersionField();
+            try {
+                versionField.setAccessible(true);
+                Long currentVersion = (Long) versionField.get(entity);
+                if (currentVersion != null) {
+                    versionField.set(entity, currentVersion + 1);
+                } else {
+                    versionField.set(entity, 1L);
+                }
+            } catch (IllegalAccessException e) {
+                throw new DataTemplateException("Ошибка инкремента версии", e);
+            }
+        }
+    }
+
+    private String getColumnName(Field field) {
+        return field.getName().toLowerCase();
     }
 }

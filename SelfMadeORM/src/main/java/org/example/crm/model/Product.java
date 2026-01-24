@@ -4,6 +4,7 @@ import java.util.UUID;
 import org.example.GeneratedValue;
 import org.example.GenerationType;
 import org.example.Id;
+import org.example.Version;
 
 public class Product {
     @Id
@@ -14,18 +15,32 @@ public class Product {
 
     private Double price;
 
-    public Product() {}
+    @Version
+    private Long version;
+
+    public Product() {
+        this.version = 0L;
+    }
 
     public Product(String name, Double price) {
-        this.id = null; // Будет сгенерирован при сохранении
+        this.id = null;
         this.name = name;
         this.price = price;
+        this.version = 0L;
     }
 
     public Product(UUID id, String name, Double price) {
         this.id = id;
         this.name = name;
         this.price = price;
+        this.version = 0L;
+    }
+
+    public Product(UUID id, String name, Double price, Long version) {
+        this.id = id;
+        this.name = name;
+        this.price = price;
+        this.version = version;
     }
 
     public UUID getId() {
@@ -52,8 +67,16 @@ public class Product {
         this.price = price;
     }
 
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
+    }
+
     @Override
     public String toString() {
-        return "Product{" + "id=" + id + ", name='" + name + '\'' + ", price=" + price + '}';
+        return "Product{" + "id=" + id + ", name='" + name + '\'' + ", price=" + price + ", version=" + version + '}';
     }
 }

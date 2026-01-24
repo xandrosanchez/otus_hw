@@ -64,7 +64,8 @@ class EntityMetaDataTest {
         List<Field> allFields = clientMetaData.getAllFields();
 
         // Then
-        assertThat(allFields).hasSize(2).extracting(Field::getName).containsExactlyInAnyOrder("id", "name");
+        // Теперь 3 поля: id, name, version
+        assertThat(allFields).hasSize(3).extracting(Field::getName).containsExactlyInAnyOrder("id", "name", "version");
     }
 
     @Test
@@ -79,12 +80,17 @@ class EntityMetaDataTest {
         List<Field> managerFieldsWithoutId = managerMetaData.getFieldsWithoutId();
 
         // Then
-        assertThat(clientFieldsWithoutId).hasSize(1).extracting(Field::getName).containsExactly("name");
-
-        assertThat(managerFieldsWithoutId)
+        // Без ID должно быть 2 поля: name и version
+        assertThat(clientFieldsWithoutId)
                 .hasSize(2)
                 .extracting(Field::getName)
-                .containsExactlyInAnyOrder("label", "param1");
+                .containsExactlyInAnyOrder("name", "version");
+
+        // Manager без ID должно быть 3 поля: label, param1, version
+        assertThat(managerFieldsWithoutId)
+                .hasSize(3)
+                .extracting(Field::getName)
+                .containsExactlyInAnyOrder("label", "param1", "version");
     }
 
     @Test
@@ -105,5 +111,48 @@ class EntityMetaDataTest {
         assertThat(managerStrategy).isNotNull();
         assertThat(managerStrategy.getGenerationType()).isEqualTo(org.example.GenerationType.SEQUENCE);
         assertThat(managerStrategy.getSequenceName()).isEqualTo("manager_seq");
+    }
+
+    @Test
+    @DisplayName("Должен находить поле версии")
+    void shouldFindVersionField() {
+        // Given
+        var clientMetaData = new EntityClassMetaDataImpl<>(Client.class);
+        var managerMetaData = new EntityClassMetaDataImpl<>(Manager.class);
+
+        // When
+        Field clientVersionField = clientMetaData.getVersionField();
+        Field managerVersionField = managerMetaData.getVersionField();
+
+        // Then
+        assertThat(clientVersionField).isNotNull();
+        assertThat(clientVersionField.getName()).isEqualTo("version");
+        assertThat(clientMetaData.hasVersionField()).isTrue();
+
+        assertThat(managerVersionField).isNotNull();
+        assertThat(managerVersionField.getName()).isEqualTo("version");
+        assertThat(managerMetaData.hasVersionField()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Должен корректно работать с сущностью без версии")
+    void shouldWorkWithEntityWithoutVersion() {
+        // Given - создадим тестовый класс без @Version
+        class NoVersionEntity {
+            @org.example.Id
+            private Long id;
+
+            private String name;
+        }
+
+        var metaData = new EntityClassMetaDataImpl<>(NoVersionEntity.class);
+
+        // When
+        Field versionField = metaData.getVersionField();
+        boolean hasVersion = metaData.hasVersionField();
+
+        // Then
+        assertThat(versionField).isNull();
+        assertThat(hasVersion).isFalse();
     }
 }

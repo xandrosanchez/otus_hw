@@ -5,25 +5,24 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import org.example.GeneratedValue;
 import org.example.GenerationType;
 import org.example.Id;
+import org.example.Version;
 
-/**
- * Реализация метаданных для сущности с поддержкой аннотации @Id и @GeneratedValue
- *
- * @param <T> тип сущности
- */
 public class EntityClassMetaDataImpl<T> implements EntityClassMetaData<T> {
     private final Class<T> entityClass;
     private GenerationStrategy generationStrategy;
     private String sequenceName;
-    private Field idField; // Кэшируем поле ID
+    private Field idField;
+    private Field versionField;
 
     public EntityClassMetaDataImpl(Class<T> entityClass) {
         this.entityClass = entityClass;
-        this.idField = findIdField(); // Находим поле ID один раз
+        this.idField = findIdField();
+        this.versionField = findVersionField();
         initGenerationStrategy();
     }
 
@@ -34,9 +33,16 @@ public class EntityClassMetaDataImpl<T> implements EntityClassMetaData<T> {
                 .orElseThrow(() -> new IllegalStateException("Поле с аннотацией @Id не найдено"));
     }
 
+    private Field findVersionField() {
+        Optional<Field> versionField = Arrays.stream(entityClass.getDeclaredFields())
+                .filter(field -> field.isAnnotationPresent(Version.class))
+                .findFirst();
+        return versionField.orElse(null);
+    }
+
     private void initGenerationStrategy() {
         if (idField == null) {
-            return; // Не должно случаться, но на всякий случай
+            return;
         }
 
         GeneratedValue generatedValue = idField.getAnnotation(GeneratedValue.class);
@@ -46,15 +52,12 @@ public class EntityClassMetaDataImpl<T> implements EntityClassMetaData<T> {
             String seqName = generatedValue.sequenceName();
             this.generationStrategy = new GenerationStrategy(strategy, seqName);
 
-            // Если стратегия SEQUENCE, но имя последовательности не указано,
-            // генерируем имя по умолчанию
             if (strategy == GenerationType.SEQUENCE && (seqName == null || seqName.isEmpty())) {
                 this.sequenceName = entityClass.getSimpleName().toLowerCase() + "_seq";
             } else {
                 this.sequenceName = seqName;
             }
         } else {
-            // По умолчанию - IDENTITY (для обратной совместимости)
             this.generationStrategy = new GenerationStrategy(GenerationType.IDENTITY);
             this.sequenceName = "";
         }
@@ -72,9 +75,6 @@ public class EntityClassMetaDataImpl<T> implements EntityClassMetaData<T> {
 
     @Override
     public Field getIdField() {
-        if (idField == null) {
-            idField = findIdField();
-        }
         return idField;
     }
 
@@ -88,6 +88,16 @@ public class EntityClassMetaDataImpl<T> implements EntityClassMetaData<T> {
         return getAllFields().stream()
                 .filter(field -> !field.isAnnotationPresent(Id.class))
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public Field getVersionField() {
+        return versionField;
+    }
+
+    @Override
+    public boolean hasVersionField() {
+        return versionField != null;
     }
 
     @Override

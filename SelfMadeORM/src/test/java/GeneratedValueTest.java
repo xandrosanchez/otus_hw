@@ -62,6 +62,10 @@ class GeneratedValueTest extends BaseOrmTest {
         assertThat(saved1.getId()).isNotNull().isPositive();
         assertThat(saved2.getId()).isNotNull().isPositive();
         assertThat(saved2.getId()).isGreaterThan(saved1.getId());
+
+        // Проверяем, что версия установлена
+        assertThat(saved1.getVersion()).isEqualTo(0L);
+        assertThat(saved2.getVersion()).isEqualTo(0L);
     }
 
     @Test

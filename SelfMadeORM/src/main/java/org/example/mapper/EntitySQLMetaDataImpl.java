@@ -18,10 +18,9 @@ public class EntitySQLMetaDataImpl<T> implements EntitySQLMetaData {
 
     @Override
     public String getSelectAllSql() {
-        String tableName = getTableName(); // используем новый метод
-        List<String> columns = metaData.getAllFields().stream()
-                .map(field -> getColumnName(field)) // используем новый метод
-                .collect(Collectors.toList());
+        String tableName = getTableName();
+        List<String> columns =
+                metaData.getAllFields().stream().map(this::getColumnName).collect(Collectors.toList());
 
         String sql = String.format("SELECT %s FROM %s", String.join(", ", columns), tableName);
 
@@ -45,54 +44,68 @@ public class EntitySQLMetaDataImpl<T> implements EntitySQLMetaData {
         String tableName = getTableName();
 
         GenerationStrategy strategy = metaData.getGenerationStrategy();
+        List<Field> fieldsToInsert;
 
         if (strategy.isIdentity()) {
-            List<Field> fields = metaData.getFieldsWithoutId();
-
-            List<String> columns =
-                    fields.stream().map(field -> getColumnName(field)).collect(Collectors.toList());
-
-            List<String> placeholders = fields.stream().map(field -> "?").collect(Collectors.toList());
-
-            String sql = String.format(
-                    "INSERT INTO %s (%s) VALUES (%s)",
-                    tableName, String.join(", ", columns), String.join(", ", placeholders));
-
-            log.debug("Generated INSERT (IDENTITY) SQL: {}", sql);
-            return sql;
+            // Для IDENTITY не включаем ID, но включаем версию (если есть)
+            fieldsToInsert = metaData.getFieldsWithoutId();
         } else {
             // Для других стратегий включаем все поля
-            List<Field> allFields = metaData.getAllFields();
-
-            List<String> columns =
-                    allFields.stream().map(field -> getColumnName(field)).collect(Collectors.toList());
-
-            List<String> placeholders = allFields.stream().map(field -> "?").collect(Collectors.toList());
-
-            String sql = String.format(
-                    "INSERT INTO %s (%s) VALUES (%s)",
-                    tableName, String.join(", ", columns), String.join(", ", placeholders));
-
-            log.debug("Generated INSERT ({} strategy) SQL: {}", strategy.getGenerationType(), sql);
-            return sql;
+            fieldsToInsert = metaData.getAllFields();
         }
+
+        List<String> columns = fieldsToInsert.stream().map(this::getColumnName).collect(Collectors.toList());
+
+        List<String> placeholders = fieldsToInsert.stream().map(field -> "?").collect(Collectors.toList());
+
+        String sql = String.format(
+                "INSERT INTO %s (%s) VALUES (%s)",
+                tableName, String.join(", ", columns), String.join(", ", placeholders));
+
+        log.debug("Generated INSERT SQL: {}", sql);
+        return sql;
     }
 
     @Override
     public String getUpdateSql() {
         String tableName = getTableName();
         Field idField = metaData.getIdField();
+
+        // Получаем все поля без ID
         List<Field> fields = metaData.getFieldsWithoutId();
 
-        List<String> setters = fields.stream()
-                .map(field -> String.format("%s = ?", getColumnName(field)))
-                .collect(Collectors.toList());
+        // Если есть поле версии, добавляем его в SET и WHERE
+        if (metaData.hasVersionField()) {
+            Field versionField = metaData.getVersionField();
 
-        String sql = String.format(
-                "UPDATE %s SET %s WHERE %s = ?", tableName, String.join(", ", setters), getColumnName(idField));
+            // Создаем SET часть: field1 = ?, field2 = ?, version = version + 1
+            List<String> setters = fields.stream()
+                    .filter(field -> !field.equals(versionField)) // исключаем версию из обычных SET
+                    .map(field -> String.format("%s = ?", getColumnName(field)))
+                    .collect(Collectors.toList());
 
-        log.debug("Generated UPDATE SQL: {}", sql);
-        return sql;
+            // Добавляем инкремент версии
+            setters.add(String.format("%s = %s + 1", getColumnName(versionField), getColumnName(versionField)));
+
+            // WHERE: id = ? AND version = ?
+            String sql = String.format(
+                    "UPDATE %s SET %s WHERE %s = ? AND %s = ?",
+                    tableName, String.join(", ", setters), getColumnName(idField), getColumnName(versionField));
+
+            log.debug("Generated UPDATE SQL with version: {}", sql);
+            return sql;
+        } else {
+            // Старый вариант без версии
+            List<String> setters = fields.stream()
+                    .map(field -> String.format("%s = ?", getColumnName(field)))
+                    .collect(Collectors.toList());
+
+            String sql = String.format(
+                    "UPDATE %s SET %s WHERE %s = ?", tableName, String.join(", ", setters), getColumnName(idField));
+
+            log.debug("Generated UPDATE SQL without version: {}", sql);
+            return sql;
+        }
     }
 
     /**
@@ -105,16 +118,10 @@ public class EntitySQLMetaDataImpl<T> implements EntitySQLMetaData {
         return sql;
     }
 
-    /**
-     * Получить имя таблицы в нижнем регистре
-     */
     private String getTableName() {
         return metaData.getName().toLowerCase();
     }
 
-    /**
-     * Получить имя колонки в нижнем регистре
-     */
     private String getColumnName(Field field) {
         return field.getName().toLowerCase();
     }

@@ -33,6 +33,6 @@ tasks.test {
     useJUnitPlatform()
     testLogging {
         events("passed", "skipped", "failed")
-        showStandardStreams = true // ← ВАЖНО: показывать System.out/err
+        showStandardStreams = true
     }
 }

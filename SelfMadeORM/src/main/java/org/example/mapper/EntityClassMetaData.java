@@ -10,11 +10,6 @@ public interface EntityClassMetaData<T> {
 
     Constructor<T> getConstructor() throws NoSuchMethodException;
 
-    /**
-     * Поле Id должно определять по наличию аннотации Id
-     * @return поле с аннотацией @Id
-     * @throws IllegalStateException если поле с @Id не найдено
-     */
     Field getIdField();
 
     List<Field> getAllFields();
@@ -22,14 +17,22 @@ public interface EntityClassMetaData<T> {
     List<Field> getFieldsWithoutId();
 
     /**
+     * Получить поле версии (если есть)
+     */
+    Field getVersionField();
+
+    /**
+     * Проверить, есть ли поле версии
+     */
+    boolean hasVersionField();
+
+    /**
      * Получить стратегию генерации ID
-     * @return стратегия генерации, может быть null если нет @GeneratedValue
      */
     GenerationStrategy getGenerationStrategy();
 
     /**
      * Получить имя последовательности (если используется SEQUENCE стратегия)
-     * @return имя последовательности или пустая строка
      */
     String getSequenceName();
 }

@@ -3,6 +3,7 @@ package org.example.crm.model;
 import org.example.GeneratedValue;
 import org.example.GenerationType;
 import org.example.Id;
+import org.example.Version;
 
 public class Client {
     @Id
@@ -11,16 +12,29 @@ public class Client {
 
     private String name;
 
-    public Client() {}
+    @Version
+    private Long version;
+
+    public Client() {
+        this.version = 0L; // Начальная версия
+    }
 
     public Client(String name) {
         this.id = null;
         this.name = name;
+        this.version = 0L;
     }
 
     public Client(Long id, String name) {
         this.id = id;
         this.name = name;
+        this.version = 0L;
+    }
+
+    public Client(Long id, String name, Long version) {
+        this.id = id;
+        this.name = name;
+        this.version = version;
     }
 
     public Long getId() {
@@ -31,6 +45,10 @@ public class Client {
         return name;
     }
 
+    public Long getVersion() {
+        return version;
+    }
+
     public void setId(Long id) {
         this.id = id;
     }
@@ -39,8 +57,12 @@ public class Client {
         this.name = name;
     }
 
+    public void setVersion(Long version) {
+        this.version = version;
+    }
+
     @Override
     public String toString() {
-        return "Client{" + "id=" + id + ", name='" + name + '\'' + '}';
+        return "Client{" + "id=" + id + ", name='" + name + '\'' + ", version=" + version + '}';
     }
 }

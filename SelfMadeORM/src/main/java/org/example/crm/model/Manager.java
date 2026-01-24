@@ -3,6 +3,7 @@ package org.example.crm.model;
 import org.example.GeneratedValue;
 import org.example.GenerationType;
 import org.example.Id;
+import org.example.Version;
 
 public class Manager {
     @Id
@@ -13,16 +14,30 @@ public class Manager {
 
     private String param1;
 
-    public Manager() {}
+    @Version
+    private Long version;
+
+    public Manager() {
+        this.version = 0L;
+    }
 
     public Manager(String label) {
         this.label = label;
+        this.version = 0L;
     }
 
     public Manager(Long no, String label, String param1) {
         this.no = no;
         this.label = label;
         this.param1 = param1;
+        this.version = 0L;
+    }
+
+    public Manager(Long no, String label, String param1, Long version) {
+        this.no = no;
+        this.label = label;
+        this.param1 = param1;
+        this.version = version;
     }
 
     public Long getNo() {
@@ -49,8 +64,16 @@ public class Manager {
         this.param1 = param1;
     }
 
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
+    }
+
     @Override
     public String toString() {
-        return "Manager{" + "no=" + no + ", label='" + label + '\'' + '}';
+        return "Manager{" + "no=" + no + ", label='" + label + '\'' + ", version=" + version + '}';
     }
 }

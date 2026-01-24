@@ -66,6 +66,7 @@ class ManagerOrmTest extends BaseOrmTest {
         assertThat(savedManager).isNotNull().satisfies(manager -> {
             assertThat(manager.getNo()).isNotNull().isPositive();
             assertThat(manager.getLabel()).isEqualTo("Test Manager");
+            assertThat(manager.getVersion()).isEqualTo(0L); // Добавляем проверку версии
         });
     }
 
